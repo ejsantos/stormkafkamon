@@ -39,6 +39,7 @@ def display(summary, friendly=False):
     print 'Number of partitions:    %d' % summary.num_partitions
     print 'Total broker depth:      %s' % fmt(summary.total_depth)
     print 'Total delta:             %s' % fmt(summary.total_delta)
+    print 'Remaining in %s :        %s' % (p.topic, (p.latest - p.current))
 
 def post_json(endpoint, zk_data):
     fields = ("broker", "topic", "partition", "earliest", "latest", "depth",
