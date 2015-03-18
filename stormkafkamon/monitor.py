@@ -5,6 +5,7 @@ import sys
 from prettytable import PrettyTable
 import requests
 import simplejson as json
+import re
 
 from zkclient import ZkClient, ZkError
 from processor import process, ProcessorError
@@ -71,8 +72,8 @@ def read_args():
         help='Zookeeper port (default: 2181)')
     parser.add_argument('--topology', type=str, required=True,
         help='Storm Topology')
-    parser.add_argument('--spoutroot', type=str, required=True,
-        help='Root path for Kafka Spout data in Zookeeper')
+    parser.add_argument('--spoutrootregex', type=str, required=True,
+        help='Regex string to get multiple root path for Kafka Spout data in Zookeeper')
     parser.add_argument('--friendly', action='store_const', const=True,
                     help='Show friendlier data')
     parser.add_argument('--postjson', type=str,
@@ -83,20 +84,30 @@ def main():
     options = read_args()
 
     zc = ZkClient(options.zserver, options.zport)
+    zc.client.start()
+    myList = zc.client.get_children('/')
+    zc.client.stop()
 
-    try:
-        zk_data = process(zc.spouts(options.spoutroot, options.topology))
-    except ZkError, e:
-        print 'Failed to access Zookeeper: %s' % str(e)
-        return 1
-    except ProcessorError, e:
-        print 'Failed to process: %s' % str(e)
-        return 1
-    else:
-        if options.postjson:
-            post_json(options.postjson, zk_data)
+    pattern = r'\b' + re.escape(options.spoutrootregex) + r'\b'
+    spoutroots = [x for x, x in enumerate(myList) if re.search(pattern, x)]
+
+    for spoutroot in spoutroots:
+        topo = spoutroot.split('-')
+        topo.remove('spout')
+        topology = '-'.join(topo)
+        try:
+            zk_data = process(zc.spouts(spoutroot, topology))
+        except ZkError, e:
+            print 'Failed to access Zookeeper: %s' % str(e)
+            return 1
+        except ProcessorError, e:
+            print 'Failed to process: %s' % str(e)
+            return 1
         else:
-            display(zk_data, true_or_false_option(options.friendly))
+            if options.postjson:
+                post_json(options.postjson, zk_data)
+            else:
+                display(zk_data, true_or_false_option(options.friendly))
 
     return 0
 
