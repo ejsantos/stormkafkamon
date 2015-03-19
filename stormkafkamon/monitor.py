@@ -71,8 +71,6 @@ def read_args():
         help='Zookeeper host (default: localhost)')
     parser.add_argument('--zport', type=int, default=2181,
         help='Zookeeper port (default: 2181)')
-    parser.add_argument('--topology', type=str, required=True,
-        help='Storm Topology')
     parser.add_argument('--spoutrootregex', type=str, required=True,
         help='Regex string to get multiple root path for Kafka Spout data in Zookeeper')
     parser.add_argument('--friendly', action='store_const', const=True,
